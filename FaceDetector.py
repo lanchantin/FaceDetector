@@ -101,18 +101,47 @@ nfMean = np.mean(imageDB[100:200])
 
 newImageDB = np.ndarray(shape=(200,144), dtype=float, order='F')
 for i in range(0,len(imageDB)):
-	print i
 	newImageDB[i] = imageDB[i].ravel()
 
 
 A = newImageDB[0:100]
+x = A
+
 
 E = np.dot(np.transpose(A),A)
 
-
-plt.plot(sorted(s, reverse=True)); #plt.show()
-
 U, s, V = np.linalg.svd(E, full_matrices=True)
+
+thresh = 1
+
+Uk = []
+sk = []
+for i in range(0,len(U)):
+	if s[i] > thresh:
+		Uk.append(U[i])
+		sk.append(s[i]) 
+
+
+Uk = np.array(Uk)
+sk = np.array(sk)
+
+Sk = np.diag(sk)
+
+k = (1/(math.sqrt(2*math.pi))) * (math.sqrt(np.linalg.det(Sk)))
+G1 = math.exp(x)
+
+
+np.dot(np.transpose(x - fMean),Uk)
+
+
+# plt.plot(sorted(s, reverse=True)); plt.show()
+
+
+########################################################
+################### LOGISTIC REGRESSION ################
+########################################################
+
+
 
 
 
