@@ -14,7 +14,6 @@ import numpy as np
 import math
 import random
 
-
 ########################################################
 ############### CREATE DATABASE OF IMAGES ##$###########
 ########################################################
@@ -74,7 +73,7 @@ for f in listdir(trainImages):
 		if f.replace("gif","png") in images:
 			pass
 		else:
-			print f
+			#print f
 			for i in range(0,8):
 				if (nonFaceCount < 100):
 					random.seed(i)
@@ -126,9 +125,12 @@ plt.imshow(collage, cmap = plt.get_cmap('gray')); #plt.show()
 plt.savefig(folder + '/collage.png')
 
 
-########################################################
-########## GAUSSIAN DISTRIBUTION CLASSIFIER ############
-########################################################
+##############################################################################################
+##############################################################################################
+############################## GAUSSIAN DISTRIBUTION CLASSIFIER ##############################
+##############################################################################################
+##############################################################################################
+
 ##### Create means ######
 posMean = np.ndarray(shape=(12,12))
 negMean = np.ndarray(shape=(12,12))
@@ -203,60 +205,46 @@ for i in range(100,200):
 A_Neg = np.array(A_Neg)
 
 
-threshold = 10
+threshold = 20
 k = threshold
-
-
-
 
 
 ############## POSITIVE GAUSSIAN ################
 Ek_Pos, Uk_Pos, Sk_Pos = ComputeSVD(A_Pos)
 
-G_POS_ARR = []
-for i in range(0,100):
-	x = imageDB144[i]
-
-	G_POS, C_POS = ComputeG(x,Uk_Pos, Sk_Pos, posMean.ravel())
-
-	G_POS_ARR.append(G_POS)
-
-	print G_POS
-
-
-print "" ; print ""
-
 
 ############## NEGATIVE GAUSSIAN ################
 Ek_Neg, Uk_Neg, Sk_Neg = ComputeSVD(A_Neg)
 
-G_NEG_ARR = []
-for i in range(0,100):
-	x = imageDB144[i].ravel()
+
+
+pi = .01
+for i in range(100,200):
+	x = imageDB144[i]
+
+	G_POS, C_POS = ComputeG(x,Uk_Pos, Sk_Pos, posMean.ravel())
 
 	G_NEG, C_NEG = ComputeG(x,Uk_Neg, Sk_Neg, negMean.ravel())
 
-	G_NEG_ARR.append(G_NEG)
+	print 'G_POS:',(G_POS*pi) 
 
-	print G_NEG
+	print 'G_NEG:', (G_NEG*(1-pi))
 
+	CLASSIFIER = (G_POS*pi)/(G_NEG*(1-pi))
+	
+	print 'CLASSIFIER:',CLASSIFIER
 
+	print ""
 
-kF = 0
-for i in range(0,100):
-	if G_POS_ARR[i] > G_NEG_ARR[i]:
-		kF+=1
-
-kNF = 0
-for i in range(0,100):
-	if G_POS_ARR[i] < G_NEG_ARR[i]:
-		kNF+=1
 
 # plt.plot(sorted(s, reverse=True)); plt.show()
 
-########################################################
-################### LOGISTIC REGRESSION ################
-########################################################
+##############################################################################################
+##############################################################################################
+####################################### LOGISTIC REGRESSION ##################################
+##############################################################################################
+##############################################################################################
+
 
 X = np.ndarray(shape=(200,145), dtype=np.dtype(np.float64))
 
@@ -279,47 +267,37 @@ for j in range(0,10000):
 	w = w + n*sum1
 
 
-testImg = skimage.img_as_float(skimage.io.imread(os.path.join(os.getcwd(), 'testImages/married.png')))
+# Test train data (sanity check)
+for i in range(0,200): 
+	g = 1/float(1+np.exp(-(np.dot(np.transpose(w),X[i]))))
+	print Y[i]
+	print g
+	print ""
+
+#############################################################
+####################### TEST FUNCTIONS ######################
+#############################################################
 
 
+def checkBounds(img, x, y):
+	if (x >= 0 and x < img.shape[0]) and ((y >= 0 and y < img.shape[1])):
+		return True
+	else:
+		return False
 
-	for i in range(0,200): 
-		g = 1/float(1+np.exp(-(np.dot(np.transpose(w),X[i]))))
-		print Y[i]
-		print g
-
-
-for i in range(0,(testImg.shape[0]-12)):
-	for j in range(0,(testImg.shape[1]-12)):
-		currFrame = testImg[i:i+12,j:j+12]
-		x = [0]*145
-		x[0:144] = currFrame.ravel()
-		x[144] = 1
-		g = 1/float(1+np.exp(-(np.dot(w,x))))
-		#print g
-		if (g > 0.5):
-			for k in range(i,i+12):
-				for l in range(j,j+12):
-					if ((k == i) or (k == i-12) or (l == j) or (l == j-12)):
-						testImg[k,l] = 1
+def drawBox(img,i,j):
+	boxWidth = 6
+	for x in range(-boxWidth, boxWidth+1):
+			for y in range(-boxWidth, boxWidth+1):
+				if (x == boxWidth) or (y == boxWidth) or (x == -boxWidth) or (y == -boxWidth):
+					try:
+						img[x+i][y+j] = 1
+					except:
+						pass
+	return img
 
 
-plt.imshow(testImg, cmap = plt.get_cmap('gray')); plt.show()	
-
-
-#plt.imshow(fullImg, cmap = plt.get_cmap('gray')); plt.show()
-
-
-
-
-###########################################################
-################ Create Gaussian  Pyramids ################
-###########################################################
-octaves = 4
-scales = 5
-initialSigma = 1.6
-
-
+## Create Gaussian  Pyramids ##
 def createGaussian(sigma):
     w = 1 + (int(6*sigma))
     G = np.zeros((w,w))
@@ -333,13 +311,82 @@ def createGaussian(sigma):
             G[x,y] /= k;      
     return G
 
+def createGaussianPyramid(inputImage):
+	octaves = 4
+	initialSigma = .4
 
-##### Gaussian Pyramid #####
-print 'Creating Gaussian Pyramid...\n'
+	image = inputImage
+
+	##### Gaussian Pyramid #####
+	print 'Creating Gaussian Pyramid...\n'
+	image = skimage.img_as_float(skimage.io.imread(os.path.join(os.getcwd(), 'testImages/married.png')))
+	GaussPyramid = {}
+	for octave in range(octaves):
+	    sigma = initialSigma#*(2.0**(octave/float(3)))
+	    gaussian = createGaussian(sigma)
+	    GaussPyramid[octave] = scipy.signal.convolve2d(image,gaussian,boundary='symm',mode='same')
+	    image = scipy.ndimage.interpolation.zoom(image,.5)
+
+	return GaussPyramid
+
+
+def findFaces(inputImage):
+	image = inputImage
+
+	mask = np.ndarray(shape=(image.shape[0],image.shape[1]), dtype=np.dtype(np.float64))
+	for i in range(0,mask.shape[0]):
+		for j in range(0,mask.shape[1]):
+			mask[i,j] = 0
+
+	for i in range(0,(image.shape[0]-12)):
+		for j in range(0,(image.shape[1]-12)):
+			currFrame = image[i:i+12,j:j+12]
+			x = [0]*145
+			x[0:144] = currFrame.ravel()
+			x[144] = 1
+			g = 1/float(1+np.exp(-(np.dot(w,x))))
+			#print np.dot(w,x)
+			if (g > 0.5):
+				mask[i,j] = np.dot(w,x)
+
+	# Nonmaximum Suppresion
+	M = 10
+	for i in range(0,(image.shape[0]-12)):
+		for j in range(0,(image.shape[1]-12)):
+			for k in range(-M,M,1):
+				for r in range(-M,M,1):
+					if checkBounds(image, i+k,j+r):
+						if mask[i,j] >  mask[i+k,j+r]:
+							mask[i+k,j+r] = 0;
+
+
+	for i in range(0,mask.shape[0]):
+		for j in range(0,mask.shape[1]):
+			if mask[i,j] > 0:
+				image = drawBox(image,i,j)
+
+	return image
+
+#############################################################
+###################### TEST ON IMAGES #######################
+#############################################################
+
+#plt.imshow(testImg, cmap = plt.get_cmap('gray')); plt.show()
 testImg = skimage.img_as_float(skimage.io.imread(os.path.join(os.getcwd(), 'testImages/married.png')))
-GaussPyramid = {}
-for octave in range(octaves):
-    sigma = initialSigma*(2.0**(octave/float(3)))
-    gaussian = createGaussian(sigma)
-    GaussPyramid[octave] = scipy.signal.convolve2d(testImg,gaussian,boundary='symm',mode='same')
-    testImg = scipy.ndimage.interpolation.zoom(testImg,.5)
+
+GaussianPyramid = None
+GaussianPyramid = createGaussianPyramid(testImg)
+
+extractedFaces = {}
+for i in GaussPyramid:
+	#plt.imshow(GaussPyramid[i], cmap = plt.get_cmap('gray')); plt.show()	
+	extractedFaces[i] = findFaces(GaussianPyramid[i])
+	
+for i in extractedFaces:
+	plt.imshow(extractedFaces[i], cmap = plt.get_cmap('gray')); plt.show()	
+
+
+
+
+findFaces(GaussianPyramid[2])
+plt.imshow(GaussianPyramid[1], cmap = plt.get_cmap('gray')); plt.show()	
