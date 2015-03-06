@@ -472,7 +472,7 @@ def findFacesLogistic(inputImage):
 w = trainLogistic(imageDB)
 
 #plt.imshow(testImg, cmap = plt.get_cmap('gray')); plt.show()
-testImg = skimage.img_as_float(skimage.io.imread(os.path.join(os.getcwd(), 'testImages/nens.png')))
+testImg = skimage.img_as_float(skimage.io.imread(os.path.join(os.getcwd(), 'testImages/aerosmith-double.png')))
 
 
 GaussianPyramid = None
