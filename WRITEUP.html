@@ -1,0 +1,453 @@
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+
+
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"><title>CS651 Computer Vision: Assignment 1</title>
+
+
+
+<td align="right" valign="middle"><font size="+3">Jack Lanchantin</font></td>
+<br>
+email: <a href="mailto:jjl5sw@virginia.edu">jjl5sw@cs.virginia.edu</a><br>
+
+<hr>
+<font color = "#7C27CB" size="+3">Computer Vision: Assignment 1</font><br>
+<font color = "#7C27CB" size="+2">Edge, Corner, and SIFT Feature Detectors</font>
+
+     
+
+<p>This assignment's goal was to demonstrate the proper extraction of certain features in images. The assigment is broken down into 3 steps:<br><br>
+<strong>1. Edge Detection</strong><br>
+The edge detection step seeks to find "edges" or aspects of an image that have a sharp change in gradient value. In order to do this, I first computed
+the gradient of the image in both the x and y directions and then a magnitude and direction of the gradient. Based on the gradeient values,
+some parts must be suppressed, or elimated, which is done through looking for edge strength values that are smaller than its neighbors.
+Finally, hysterisis thresholding is applied in order to turn dim pixels into black and light pixels into all white. <br>
+The important aspects of edge detection are blurring the image with the proper sigma value, which depends on what type of image you are looking at.
+For example if the image has a lot going on and you only want the main edges, then you want a lot of blurring. <br><br>
+
+
+<strong>2. Corner Detection</strong><br>
+The corner detection step starts similar to edge detection in that it looks for values in the image with sharp gradient values. However,
+corner detection looks for point in the image where the smaller eigenvalue of the surrounding covariance matrix is high, which represents the points where
+there is a very high variance. The difference between this and an edge is that it is not shift invariant, so sliding that point up, down,
+left, or right should give different eigenvalue results, demonstrating that it's a corner, not just an edge. One challenging aspect of this is
+eliminating surrounding high eigenvalue points so that the algorithm just finds one corner. This was done in my program by sorting the
+eigenvalues by highest to smallest, and by looping through that list, it eliminates all surrounding point by marking them as a flag so that they won't
+be looked at when they are come across by looping through the list.<br>
+Similar to edge detection, the sigma value for blurring the image is important. In addition, the size of the window around each point to 
+compute the covariance matrix is also important. <br><br>
+
+<strong>3. SIFT Feature Extractor</strong><br> 
+The SIFT feature detector is the most robust because it can be applied regardless of the ange the picture was taken from.
+The first step was to construct the Gaussian pyramid which, in my example, was 4 different layers of different sizes of the input image.
+The first layer was the full size image, the second was half the input image size, and so on. At each layer, the image was blurred with a 
+different sigma value for the gaussian. Once this was created, a Difference of Gaussians (DoG) Pyramid was constructed by subtracting 
+two different sigma value blurred images at each layer. Once the DoG was constructed, I looked for extrema values which were either
+max or min pixels based on its surrounding pixels at its current scale, and also 1 up and down its scale.
+After finding the extrema values, they were corrected by keypoint localization, and then filtered through a low contrast filter and
+edge response elimination.
+
+<hr>
+<strong>Readme:</strong><br> 
+My program is run in 3 different .py files: <br>
+Edge Detector: python ./edgeDetector.py<br>
+Corner Detector: python ./cornerDetector.py<br>
+SIFT: python ./SIFT.py<br>
+The parameter and files to specify are declared within the file <br>
+
+     
+     <hr>
+     <hr>
+
+     <font color="#336699" size="+5">Mandrill</font>
+     <br>
+     <strong>Parameters:</strong><br>
+      &#963; = 3.5<br>
+      &#964;<sub>h</sub> = 0.3<br>
+      &#964;<sub>l</sub> = 0.15<br>
+      Corner neighborhood = 7x7<br>
+      &#955;<sub>2</sub> threshold = 0.3<br>
+      SIFT Low Contrast Thresh: 0.009<br>
+      SIFT Initial Sigma Val: 1.6<br>
+      SIFT Octaves: 4<br>
+      SIFT Scales: 5<br>
+
+
+      <br>
+      <strong>Analysis:</strong><br>
+      The Mandrill image is a good example for edges and corners because there aren't very well defined lines and corners, but there are 
+          obvious features of the Mandrill that should be extracted from an edge and corner detector. It is important to set the sigma value in the Gaussian blur semi
+          large because of the hair on the Mandrill. Since we do not want every hair to trigger the edge or corner detector, it should be blurred so that the
+          hair looks coninuous.
+      <br>
+      <div class="row">
+        <div class="large-12 columns">
+        <div id="slider">
+          <br>
+          <strong>Original Image:</strong>
+          <br>
+          <img src="./Mandrill/Mandrill.png"/>
+        </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="large-4 columns">
+          <br>
+          <strong>Horizontal Gradient:</strong>
+          <br>
+          <img src="./Mandrill/horizontalGradient.png"/>
+        </div>
+        
+        <div class="large-4 columns">
+          <br>
+          <strong>Vertical Gradient:</strong>
+          <br>
+          <img src="./Mandrill/verticalGradient.png"/>
+  
+        </div>
+        
+        <div class="large-4 columns">
+          <br>
+          <strong>Gradient Strength:</strong>
+          <br>
+          <img src="./Mandrill/gradientStrength.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Nonmaximum Edge Supression:</strong>
+          <br>
+          <img src="./Mandrill/edgeStrength.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Edges from Hysteresis Thresholding:</strong>
+          <br>
+          <img src="./Mandrill/edges.png"/>
+        </div>
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Corners:</strong>
+          <br>
+          <img src="./Mandrill/corners.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>SIFT Extrema Points:</strong>
+          <br>
+          <img src="./Mandrill/extrema.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>SIFT Keypoint Localized Extrema Points:</strong>
+          <br>
+          <img src="./Mandrill/localizedExtrema.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>SIFT Edge Eliminated and Low Contrast Filtered Extrema Points:</strong>
+          <br>
+          <img src="./Mandrill/filteredLocalizedExtrema.png"/>
+        </div>
+      
+        </div>
+
+
+     <br>
+     <hr>
+     <br>
+
+     <font color="#336699" size="+5">Building</font>
+     <br>
+     <strong>Parameters:</strong><br>
+      &#963; = 3.2<br>
+      &#964;<sub>h</sub> = 0.3<br>
+      &#964;<sub>l</sub> = 0.15<br>
+      Corner neighborhood = 9x9<br>
+      &#955;<sub>2</sub> threshold = 1<br>
+      SIFT Low Contrast Thresh: 0.009<br>
+      SIFT Initial Sigma Val: 1.6<br>
+      SIFT Octaves: 4<br>
+      SIFT Scales: 5<br>
+     
+      <br>
+      <strong>Analysis:</strong><br>
+      The Building Image was a good image for edge detection because there are many points on the building, but not many clearly defined corners.
+      I found that increasing the covariance matrix window size was important for finding the correct corners. 
+      <br>
+      <div class="row">
+        <div class="large-12 columns">
+        <div id="slider">
+          <br>
+          <strong>Original Image:</strong>
+          <br>
+          <img src="./Building/Building.png"/>
+        </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="large-4 columns">
+          <br>
+          <strong>Horizontal Gradient:</strong>
+          <br>
+          <img src="./Building/horizontalGradient.png"/>
+        </div>
+        
+        <div class="large-4 columns">
+          <br>
+          <strong>Vertical Gradient:</strong>
+          <br>
+          <img src="./Building/verticalGradient.png"/>
+  
+        </div>
+        
+        <div class="large-4 columns">
+          <br>
+          <strong>Gradient Strength:</strong>
+          <br>
+          <img src="./Building/gradientStrength.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Nonmaximum Edge Supression:</strong>
+          <br>
+          <img src="./Building/edgeStrength.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Edges from Hysteresis Thresholding:</strong>
+          <br>
+          <img src="./Building/edges.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Corners:</strong>
+          <br>
+          <img src="./Building/corners.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>SIFT Extrema Points:</strong>
+          <br>
+          <img src="./Building/extrema.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>SIFT Keypoint Localized Extrema Points:</strong>
+          <br>
+          <img src="./Building/localizedExtrema.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>SIFT Edge Eliminated and Low Contrast Filtered Extrema Points:</strong>
+          <br>
+          <img src="./Building/filteredLocalizedExtrema.png"/>
+        </div>
+      
+
+          <hr>
+
+     <font color="#336699" size="+5">Checker</font>
+     <br>
+     <strong>Parameters:</strong><br>
+      &#963; = 2.0<br>
+      &#964;<sub>h</sub> = 0.45<br>
+      &#964;<sub>l</sub> = 0.2<br>
+      Corner neighborhood = 5x5<br>
+      &#955;<sub>2</sub> threshold = 0.5 <br>
+      <br>
+      <strong>Analysis:</strong><br>
+      The checker image was a good image for corner detection because there are many clearly defined corners, but it was taken with a barrel
+      distorted lens, which makes it semi-difficult to detect. The Sigma value didn't really matter too much here because the corners were pretty well
+      defined. 
+      <br>
+      <div class="row">
+        <div class="large-12 columns">
+        <div id="slider">
+          <br>
+          <strong>Original Image:</strong>
+          <br>
+          <img src="./Checker/Checker.png"/>
+        </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="large-4 columns">
+          <br>
+          <strong>Horizontal Gradient:</strong>
+          <br>
+          <img src="./Checker/horizontalGradient.png"/>
+        </div>
+        
+        <div class="large-4 columns">
+          <br>
+          <strong>Vertical Gradient:</strong>
+          <br>
+          <img src="./Checker/verticalGradient.png"/>
+  
+        </div>
+        
+        <div class="large-4 columns">
+          <br>
+          <strong>Gradient Strength:</strong>
+          <br>
+          <img src="./Checker/gradientStrength.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Nonmaximum Edge Supression:</strong>
+          <br>
+          <img src="./Checker/edgeStrength.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Edges from Hysteresis Thresholding:</strong>
+          <br>
+          <img src="./Checker/edges.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>Corners:</strong>
+          <br>
+          <img src="./Checker/corners.png"/>
+        </div>
+
+
+        <div class="large-4 columns">
+          <br>
+          <strong>SIFT Edge Eliminated and Low Contrast Filtered Extrema Points:</strong>
+          <br>
+          <img src="./Checker/filteredLocalizedExtrema.png"/>
+        </div>
+  
+        <br>
+        <br>
+        <hr>
+        <br>
+        <br>
+
+        <table align="left" border="1" width="0%">
+        	<tbody><tr>
+        	<td>
+        	<font color="#336699" size="+2">Lake George</font><br>
+        	<strong>Parameters:</strong><br>
+        	&#963; = 1.5<br>
+        	&#964;<sub>h</sub> = 0.4<br>
+        	&#964;<sub>l</sub> = 0.2<br>
+        	Corner neighborhood = 7x7<br>
+        	&#955;<sub>2</sub> threshold = 0.65<br>
+          SIFT Low Contrast Thresh: 0.009<br>
+          SIFT Initial Sigma Val: 1.6<br>
+          SIFT Octaves: 4<br>
+          SIFT Scales: 5<br>
+        	</td>
+        	<td><img src="./LakeGeorge/LakeGeorge.png"></td>
+        	<td><img src="./LakeGeorge/gradientStrength.png"></td>
+        	</tr>
+
+        	<td><img src="./LakeGeorge/horizontalGradient.png"></td>
+        	<td><img src="./LakeGeorge/verticalGradient.png"></td>
+          <td><img src="./LakeGeorge/edgeStrength.png"></td>
+        	</tr>
+        	<tr>
+        	<td><img src="./LakeGeorge/edges.png"></td>
+        	<td><img src="./LakeGeorge/corners.png"></td>
+          <td><img src="./LakeGeorge/filteredLocalizedExtrema.png"></td>
+        	</tr>
+        </tbody></table>
+
+
+        <br>
+        <br>
+        <hr>
+        <br>
+        <br>
+        <hr>
+        <br>
+        <br>
+
+        <table  border="2" width="0%">
+          <tbody><tr>
+          <td>
+          <font color="#336699" size="+2">Cameraman</font><br>
+          <strong>Parameters:</strong><br>
+          &#963; = 2.0<br>
+          &#964;<sub>h</sub> = 0.45<br>
+          &#964;<sub>l</sub> = 0.2<br>
+          Corner neighborhood = 5x5<br>
+          &#955;<sub>2</sub> threshold = 0.5 <br>
+          SIFT Low Contrast Thresh: 0.009<br>
+          SIFT Initial Sigma Val: 1.6<br>
+          SIFT Octaves: 4<br>
+          SIFT Scales: 5<br>
+          </td>
+          <td><img src="./Cameraman/Cameraman.png"></td>
+          <td><img src="./Cameraman/gradientStrength.png"></td>
+          </tr>
+          <tr>
+          <td><img src="./Cameraman/horizontalGradient.png"></td>
+          <td><img src="./Cameraman/verticalGradient.png"></td>
+          <td><img src="./Cameraman/edgeStrength.png"></td>
+          </tr>
+          <tr>
+          <td><img src="./Cameraman/edges.png"></td>
+          <td><img src="./Cameraman/corners.png"></td>
+          <td><img src="./Cameraman/filteredLocalizedExtrema.png"></td>
+          </tr>
+        </tbody></table>
+
+     
+
+      <br>
+      <br>
+      <br>
+      <align="center">
+      <footer class="row">
+        <div class="large-12 columns">
+          <hr/>
+          <div class="row">
+            <div class="large-6 columns">
+              <p>* HTML Templates taken from: http://foundation.zurb.com/templates.html on 2/2/15, and Michael Holroyd's Report</p>
+              <p>** I submitted this assigment 1 day late </p>
+            </div>
+            <div class="large-6 columns">
+              <ul class="inline-list right">
+              </ul>
+            </div>
+          </div>
+        </div> 
+      </footer>
+
+</div>
+</body></html>
+    
