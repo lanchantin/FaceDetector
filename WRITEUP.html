@@ -1,7 +1,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml"><head>
 
 
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"><title>CS651 Computer Vision: Assignment 1</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"><title>CS651 Computer Vision: Assignment 2</title>
 
 
 
@@ -10,427 +10,147 @@
 email: <a href="mailto:jjl5sw@virginia.edu">jjl5sw@cs.virginia.edu</a><br>
 
 <hr>
-<font color = "#7C27CB" size="+3">Computer Vision: Assignment 1</font><br>
-<font color = "#7C27CB" size="+2">Edge, Corner, and SIFT Feature Detectors</font>
+<font color = "#7C27CB" size="+3">Computer Vision: Assignment 2</font><br>
+<font color = "#7C27CB" size="+2">Face Detection Using Gaussian Distributions and Logistic Regression</font>
 
      
 
-<p>This assignment's goal was to demonstrate the proper extraction of certain features in images. The assigment is broken down into 3 steps:<br><br>
-<strong>1. Edge Detection</strong><br>
-The edge detection step seeks to find "edges" or aspects of an image that have a sharp change in gradient value. In order to do this, I first computed
-the gradient of the image in both the x and y directions and then a magnitude and direction of the gradient. Based on the gradeient values,
-some parts must be suppressed, or elimated, which is done through looking for edge strength values that are smaller than its neighbors.
-Finally, hysterisis thresholding is applied in order to turn dim pixels into black and light pixels into all white. <br>
-The important aspects of edge detection are blurring the image with the proper sigma value, which depends on what type of image you are looking at.
-For example if the image has a lot going on and you only want the main edges, then you want a lot of blurring. <br><br>
+<p>This assignment's goal was to demonstrate the proper extraction of faces in images. I did this by implementing the following two different classifiers:<br><br>
 
 
-<strong>2. Corner Detection</strong><br>
-The corner detection step starts similar to edge detection in that it looks for values in the image with sharp gradient values. However,
-corner detection looks for point in the image where the smaller eigenvalue of the surrounding covariance matrix is high, which represents the points where
-there is a very high variance. The difference between this and an edge is that it is not shift invariant, so sliding that point up, down,
-left, or right should give different eigenvalue results, demonstrating that it's a corner, not just an edge. One challenging aspect of this is
-eliminating surrounding high eigenvalue points so that the algorithm just finds one corner. This was done in my program by sorting the
-eigenvalues by highest to smallest, and by looping through that list, it eliminates all surrounding point by marking them as a flag so that they won't
-be looked at when they are come across by looping through the list.<br>
-Similar to edge detection, the sigma value for blurring the image is important. In addition, the size of the window around each point to 
-compute the covariance matrix is also important. <br><br>
+<strong>1. Gaussian Distribution </strong><br>
+The Gaussian distribution classifier seeks to produce a multivariate Gaussian for the test image using the train images for the mean and standard deviation. It computes both the distribution using the mean and std dev for the face images, and the distribution using the mean and std dev for the non faces. It then compares the probabilities of the two and chooses the one with greater probability. Since I was not getting good results using the regular multivariate gaussian distribution, I also enduced a prior probability on the output, assuming that the prior probability of seeing a face for all patches is about 0.001%.<br>
 
-<strong>3. SIFT Feature Extractor</strong><br> 
-The SIFT feature detector is the most robust because it can be applied regardless of the ange the picture was taken from.
-The first step was to construct the Gaussian pyramid which, in my example, was 4 different layers of different sizes of the input image.
-The first layer was the full size image, the second was half the input image size, and so on. At each layer, the image was blurred with a 
-different sigma value for the gaussian. Once this was created, a Difference of Gaussians (DoG) Pyramid was constructed by subtracting 
-two different sigma value blurred images at each layer. Once the DoG was constructed, I looked for extrema values which were either
-max or min pixels based on its surrounding pixels at its current scale, and also 1 up and down its scale.
-After finding the extrema values, they were corrected by keypoint localization, and then filtered through a low contrast filter and
-edge response elimination.
+
+<br><strong>2. Logistic Regression</strong><br> 
+Logistic regression seeks to find a linear separator between all of the faces and all of the non faces. This method is 
+trained to find w, the vector which separates the 2 classes. <br>
+
+
+<br><strong>Analysis</strong><br> 
+It seems as though the logistic regression method is a better face detector. This is probably due to the fact that it is a discriminative classification model, which tends to perform better on tasks such as face detection. It is also very hard to model what a non-face looks like because there are so many possibilities. Since the gaussian classifier uses the means and standard deviations of the training images directly, it does not produce great results. The logistic regression classifier on the other hand, learns the separator itself, which is why it performs slightly better. In a way, the logistic regression classifier "builds" a representation of a face in w, whereas the gaussian classifier simply compares faces vs non faces using prior data <br><br>
+
+One of the main reasons my models fail to produce close to perfect results in the gaussian pyramid representaion is that sometimes the detector detects the full face at one level of the gaussian pyramid, but it is not quite as strong as another level, so it gets removed during the non maximum suppression. If I could improve on the strength of the actual faces, then it would perform better. One way to do this would be to use more images in the training data. As you can see in the images, there are many places where the image detector falsely triggers. This happens in many cases where there is a strong change from dark to light to dark again (as seen in the mean face image).<br><br>
+
+The reason that neither of these methods tend to give very good results overall is due to 3 major reasons: <br>
+<strong>1.</strong> We are only using 144 dimensional representations of the data. This is a very small number and it means that we are losing a lot of the information contained in the image since we compress each image larger than 12x12 to this size. <br>
+<strong>2.</strong> We are simply using the raw greyscale pixel values as features. In good face detectors, some feature representaion of the patches would be used instead. <br>
+<strong>3.</strong> Lastly, we are only using 200 training images. This is extremely small and will never produce very reliable results. In order for a face detector to work well, we would need thousands or millions of images.<br>
+
 
 <hr>
 <strong>Readme:</strong><br> 
-My program is run in 3 different .py files: <br>
-Edge Detector: python ./edgeDetector.py<br>
-Corner Detector: python ./cornerDetector.py<br>
-SIFT: python ./SIFT.py<br>
+My program is run using python2 by running python ./FaceDetector.py <br>
 The parameter and files to specify are declared within the file <br>
 
      
      <hr>
      <hr>
 
-     <font color="#336699" size="+5">Mandrill</font>
+     <font color="#336699" size="+5">Training Data</font>
      <br>
-     <strong>Parameters:</strong><br>
-      &#963; = 3.5<br>
-      &#964;<sub>h</sub> = 0.3<br>
-      &#964;<sub>l</sub> = 0.15<br>
-      Corner neighborhood = 7x7<br>
-      &#955;<sub>2</sub> threshold = 0.3<br>
-      SIFT Low Contrast Thresh: 0.009<br>
-      SIFT Initial Sigma Val: 1.6<br>
-      SIFT Octaves: 4<br>
-      SIFT Scales: 5<br>
-
+     My program was trained on 100 faces from the MIT-CMU face datasets, and 100 non faces taken from randomly sampled
+     patches from images in the MIT-CMU face dataset that did not contain faces. The training data is shown in the following image, where the left half is the positive faces, and the right half is the negative non-faces.
 
       <br>
-      <strong>Analysis:</strong><br>
-      The Mandrill image is a good example for edges and corners because there aren't very well defined lines and corners, but there are 
-          obvious features of the Mandrill that should be extracted from an edge and corner detector. It is important to set the sigma value in the Gaussian blur semi
-          large because of the hair on the Mandrill. Since we do not want every hair to trigger the edge or corner detector, it should be blurred so that the
-          hair looks coninuous.
+
       <br>
-      <div class="row">
-        <div class="large-12 columns">
-        <div id="slider">
-          <br>
-          <strong>Original Image:</strong>
-          <br>
-          <img src="./Mandrill/Mandrill.png"/>
-        </div>
-        </div>
-      </div>
-      
-      <div class="row">
-        <div class="large-4 columns">
-          <br>
-          <strong>Horizontal Gradient:</strong>
-          <br>
-          <img src="./Mandrill/horizontalGradient.png"/>
-        </div>
-        
-        <div class="large-4 columns">
-          <br>
-          <strong>Vertical Gradient:</strong>
-          <br>
-          <img src="./Mandrill/verticalGradient.png"/>
-  
-        </div>
-        
-        <div class="large-4 columns">
-          <br>
-          <strong>Gradient Strength:</strong>
-          <br>
-          <img src="./Mandrill/gradientStrength.png"/>
-        </div>
+      <strong>Training Data:</strong>
+      <br>
+      <img src="./collage.png" />
 
 
-        <div class="large-4 columns">
-          <br>
-          <strong>Nonmaximum Edge Supression:</strong>
-          <br>
-          <img src="./Mandrill/edgeStrength.png"/>
-        </div>
 
-
-        <div class="large-4 columns">
-          <br>
-          <strong>Edges from Hysteresis Thresholding:</strong>
-          <br>
-          <img src="./Mandrill/edges.png"/>
-        </div>
-
-        <div class="large-4 columns">
-          <br>
-          <strong>Corners:</strong>
-          <br>
-          <img src="./Mandrill/corners.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>SIFT Extrema Points:</strong>
-          <br>
-          <img src="./Mandrill/extrema.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>SIFT Keypoint Localized Extrema Points:</strong>
-          <br>
-          <img src="./Mandrill/localizedExtrema.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>SIFT Edge Eliminated and Low Contrast Filtered Extrema Points:</strong>
-          <br>
-          <img src="./Mandrill/filteredLocalizedExtrema.png"/>
-        </div>
-      
-        </div>
-
-
-     <br>
      <hr>
+     <hr>
+
+     <font color="#336699" size="+5">Gaussian Distribution</font>
      <br>
-
-     <font color="#336699" size="+5">Building</font>
      <br>
-     <strong>Parameters:</strong><br>
-      &#963; = 3.2<br>
-      &#964;<sub>h</sub> = 0.3<br>
-      &#964;<sub>l</sub> = 0.15<br>
-      Corner neighborhood = 9x9<br>
-      &#955;<sub>2</sub> threshold = 1<br>
-      SIFT Low Contrast Thresh: 0.009<br>
-      SIFT Initial Sigma Val: 1.6<br>
-      SIFT Octaves: 4<br>
-      SIFT Scales: 5<br>
-     
+      <strong>Parameters:</strong><br>
+      &#964;<sub>pos</sub> = 8.2<br>
+      &#964;<sub>neg</sub> = 4.2<br>
+      prior face probability = 0.001 <br>
+      non maximum suppression window range: 20 pixels <br>
+     The following 2 plots show the s values for Sigular Value Decomposition for both face images and non-face images
       <br>
-      <strong>Analysis:</strong><br>
-      The Building Image was a good image for edge detection because there are many points on the building, but not many clearly defined corners.
-      I found that increasing the covariance matrix window size was important for finding the correct corners. 
       <br>
-      <div class="row">
-        <div class="large-12 columns">
-        <div id="slider">
-          <br>
-          <strong>Original Image:</strong>
-          <br>
-          <img src="./Building/Building.png"/>
-        </div>
-        </div>
-      </div>
-      
-      <div class="row">
-        <div class="large-4 columns">
-          <br>
-          <strong>Horizontal Gradient:</strong>
-          <br>
-          <img src="./Building/horizontalGradient.png"/>
-        </div>
-        
-        <div class="large-4 columns">
-          <br>
-          <strong>Vertical Gradient:</strong>
-          <br>
-          <img src="./Building/verticalGradient.png"/>
-  
-        </div>
-        
-        <div class="large-4 columns">
-          <br>
-          <strong>Gradient Strength:</strong>
-          <br>
-          <img src="./Building/gradientStrength.png"/>
-        </div>
+      <strong>face S Value:</strong>
+      <br>
+      <img src="./FaceSValue.png" height="400" width="400" />
+       <strong></strong><br>
+      <strong>non face S Value:</strong>
+      <br>
+      <img src="./nonFaceSValue.png" height="400" width="400" />
+      <strong></strong><br>
+
+      I chose different tau values for each of the gaussian distributions since they produce different s values. I chose 8.2 for faces and 4.2 for non faces.
+      <br>
+      <br>
+
+      The following plots show the means of the face and non face images.
+      <br>
+      <hr>
+      <br>
+      <strong>Face Mean:</strong>
+      <br>
+      <img src="./meanPosFace.png" height="400" width="400"/>
+       <strong></strong><br>
+      <strong>Non Face Mean:</strong>
+      <br>
+      <img src="./meanNegFace.png" height="400" width="400" />
+      <strong></strong><br>
+
+      The following are sample output images from my Gaussian Distribution classifier:
+       <strong></strong><br>
+       <img src="./testResults/GAUSSIAN_nens0.png"/>
+      <strong></strong><br>
+       <img src="./testResults/GAUSSIAN_next0.png"/>
+      <strong></strong><br>
+      <img src="./testResults/GAUSSIAN_ew-friends0.png"/>
+      <strong></strong><br>
+      <img src="./testResults/GAUSSIAN_aerosmith-double0.png"/>
+      <strong></strong><br>
+       <img src="./testResults/GAUSSIAN_frisbee0.png"/>
+      <strong></strong><br>
 
 
-        <div class="large-4 columns">
-          <br>
-          <strong>Nonmaximum Edge Supression:</strong>
-          <br>
-          <img src="./Building/edgeStrength.png"/>
-        </div>
 
+     <hr>
+     <hr>
 
-        <div class="large-4 columns">
-          <br>
-          <strong>Edges from Hysteresis Thresholding:</strong>
-          <br>
-          <img src="./Building/edges.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>Corners:</strong>
-          <br>
-          <img src="./Building/corners.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>SIFT Extrema Points:</strong>
-          <br>
-          <img src="./Building/extrema.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>SIFT Keypoint Localized Extrema Points:</strong>
-          <br>
-          <img src="./Building/localizedExtrema.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>SIFT Edge Eliminated and Low Contrast Filtered Extrema Points:</strong>
-          <br>
-          <img src="./Building/filteredLocalizedExtrema.png"/>
-        </div>
-      
-
-          <hr>
-
-     <font color="#336699" size="+5">Checker</font>
+     <font color="#336699" size="+5">Logistic Regression</font>
      <br>
      <strong>Parameters:</strong><br>
-      &#963; = 2.0<br>
-      &#964;<sub>h</sub> = 0.45<br>
-      &#964;<sub>l</sub> = 0.2<br>
-      Corner neighborhood = 5x5<br>
-      &#955;<sub>2</sub> threshold = 0.5 <br>
-      <br>
-      <strong>Analysis:</strong><br>
-      The checker image was a good image for corner detection because there are many clearly defined corners, but it was taken with a barrel
-      distorted lens, which makes it semi-difficult to detect. The Sigma value didn't really matter too much here because the corners were pretty well
-      defined. 
-      <br>
-      <div class="row">
-        <div class="large-12 columns">
-        <div id="slider">
-          <br>
-          <strong>Original Image:</strong>
-          <br>
-          <img src="./Checker/Checker.png"/>
-        </div>
-        </div>
-      </div>
-      
-      <div class="row">
-        <div class="large-4 columns">
-          <br>
-          <strong>Horizontal Gradient:</strong>
-          <br>
-          <img src="./Checker/horizontalGradient.png"/>
-        </div>
-        
-        <div class="large-4 columns">
-          <br>
-          <strong>Vertical Gradient:</strong>
-          <br>
-          <img src="./Checker/verticalGradient.png"/>
-  
-        </div>
-        
-        <div class="large-4 columns">
-          <br>
-          <strong>Gradient Strength:</strong>
-          <br>
-          <img src="./Checker/gradientStrength.png"/>
-        </div>
+      number of training iterations: 10,000<br>
+      learning rate = 0.03<br>
+      non maximum suppression window range: 20 pixels <br>
+
+      &#964;<sub>neg</sub> = 4.2<br>
+
+     The following picture shows the accuracy of the training data with respect to the number of iterations.
+     <br>
+      <img src="./logisticIterations.png"/>
+      <strong></strong><br>
+
+      The following are sample output images from my logistic regression classifier:
+      <strong></strong><br>
+       <img src="./testResults/LOGISTIC_nens0.png"/>
+      <strong></strong><br>
+       <img src="./testResults/LOGISTIC_next0.png"/>
+      <strong></strong><br>
+      <img src="./testResults/LOGISTIC_ew-friends0.png"/>
+      <strong></strong><br>
+      <img src="./testResults/LOGISTIC_aerosmith-double0.png"/>
+      <strong></strong><br>
+       <img src="./testResults/LOGISTIC_frisbee0.png"/>
+      <strong></strong><br>
 
 
-        <div class="large-4 columns">
-          <br>
-          <strong>Nonmaximum Edge Supression:</strong>
-          <br>
-          <img src="./Checker/edgeStrength.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>Edges from Hysteresis Thresholding:</strong>
-          <br>
-          <img src="./Checker/edges.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>Corners:</strong>
-          <br>
-          <img src="./Checker/corners.png"/>
-        </div>
-
-
-        <div class="large-4 columns">
-          <br>
-          <strong>SIFT Edge Eliminated and Low Contrast Filtered Extrema Points:</strong>
-          <br>
-          <img src="./Checker/filteredLocalizedExtrema.png"/>
-        </div>
-  
-        <br>
-        <br>
-        <hr>
-        <br>
-        <br>
-
-        <table align="left" border="1" width="0%">
-        	<tbody><tr>
-        	<td>
-        	<font color="#336699" size="+2">Lake George</font><br>
-        	<strong>Parameters:</strong><br>
-        	&#963; = 1.5<br>
-        	&#964;<sub>h</sub> = 0.4<br>
-        	&#964;<sub>l</sub> = 0.2<br>
-        	Corner neighborhood = 7x7<br>
-        	&#955;<sub>2</sub> threshold = 0.65<br>
-          SIFT Low Contrast Thresh: 0.009<br>
-          SIFT Initial Sigma Val: 1.6<br>
-          SIFT Octaves: 4<br>
-          SIFT Scales: 5<br>
-        	</td>
-        	<td><img src="./LakeGeorge/LakeGeorge.png"></td>
-        	<td><img src="./LakeGeorge/gradientStrength.png"></td>
-        	</tr>
-
-        	<td><img src="./LakeGeorge/horizontalGradient.png"></td>
-        	<td><img src="./LakeGeorge/verticalGradient.png"></td>
-          <td><img src="./LakeGeorge/edgeStrength.png"></td>
-        	</tr>
-        	<tr>
-        	<td><img src="./LakeGeorge/edges.png"></td>
-        	<td><img src="./LakeGeorge/corners.png"></td>
-          <td><img src="./LakeGeorge/filteredLocalizedExtrema.png"></td>
-        	</tr>
-        </tbody></table>
-
-
-        <br>
-        <br>
-        <hr>
-        <br>
-        <br>
-        <hr>
-        <br>
-        <br>
-
-        <table  border="2" width="0%">
-          <tbody><tr>
-          <td>
-          <font color="#336699" size="+2">Cameraman</font><br>
-          <strong>Parameters:</strong><br>
-          &#963; = 2.0<br>
-          &#964;<sub>h</sub> = 0.45<br>
-          &#964;<sub>l</sub> = 0.2<br>
-          Corner neighborhood = 5x5<br>
-          &#955;<sub>2</sub> threshold = 0.5 <br>
-          SIFT Low Contrast Thresh: 0.009<br>
-          SIFT Initial Sigma Val: 1.6<br>
-          SIFT Octaves: 4<br>
-          SIFT Scales: 5<br>
-          </td>
-          <td><img src="./Cameraman/Cameraman.png"></td>
-          <td><img src="./Cameraman/gradientStrength.png"></td>
-          </tr>
-          <tr>
-          <td><img src="./Cameraman/horizontalGradient.png"></td>
-          <td><img src="./Cameraman/verticalGradient.png"></td>
-          <td><img src="./Cameraman/edgeStrength.png"></td>
-          </tr>
-          <tr>
-          <td><img src="./Cameraman/edges.png"></td>
-          <td><img src="./Cameraman/corners.png"></td>
-          <td><img src="./Cameraman/filteredLocalizedExtrema.png"></td>
-          </tr>
-        </tbody></table>
-
-     
 
       <br>
       <br>
-      <br>
+
       <align="center">
       <footer class="row">
         <div class="large-12 columns">
@@ -438,7 +158,7 @@ The parameter and files to specify are declared within the file <br>
           <div class="row">
             <div class="large-6 columns">
               <p>* HTML Templates taken from: http://foundation.zurb.com/templates.html on 2/2/15, and Michael Holroyd's Report</p>
-              <p>** I submitted this assigment 1 day late </p>
+              <p>** I submitted this assigment 2 days late </p>
             </div>
             <div class="large-6 columns">
               <ul class="inline-list right">

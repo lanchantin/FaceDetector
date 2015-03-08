@@ -32,11 +32,10 @@ def createGaussian(sigma):
     return G
 
 def createGaussianPyramid(inputImage):
-	octaves = 6
-	initialSigma = .1
+	octaves = 7
+	initialSigma = .2
 
-	image = scipy.ndimage.interpolation.zoom(inputImage,.7)
-
+	image = inputImage
 	##### Gaussian Pyramid #####
 	print 'Creating Gaussian Pyramid...\n'
 	GaussPyramid = {}
@@ -54,8 +53,10 @@ def checkBounds(img, x, y):
 	else:
 		return False
 
-def drawBox(img,i,j):
-	boxWidth = 6
+def drawBox(img,i,j,mult):
+	boxWidth = int(round(6*mult))
+	i = int(round(i+6*mult))
+	j = int(round(j+6*mult))
 	for x in range(-boxWidth, boxWidth+1):
 			for y in range(-boxWidth, boxWidth+1):
 				if (x == boxWidth) or (y == boxWidth) or (x == -boxWidth) or (y == -boxWidth):
@@ -65,8 +66,15 @@ def drawBox(img,i,j):
 						pass
 	return img
 
-
-
+def nonMaxSuppression(mask, image, M):
+	for i in range(0,(mask.shape[0]-12)):
+		for j in range(0,(mask.shape[1]-12)):
+			for k in range(-M,M,1):
+				for r in range(-M,M,1):
+					if checkBounds(image, i+k,j+r):
+						if mask[i,j] >  mask[i+k,j+r]:
+							mask[i+k,j+r] = 0;
+	return mask
 
 def createDB(DIR):
 	folder = DIR
@@ -154,7 +162,6 @@ def createDB(DIR):
 	return imageDB
 
 
-
 def createCollage(iDB, DIR):
 	folder = DIR
 
@@ -176,7 +183,8 @@ def createCollage(iDB, DIR):
 
 
 	plt.imshow(collage, cmap = plt.get_cmap('gray')); #plt.show()
-	plt.savefig(folder + '/collage.png')
+	plt.axis('off')
+	plt.savefig(folder + '/collage.png',bbox_inches='tight')
 
 	return collage
 
@@ -192,10 +200,12 @@ def findMeans(iDB):
 
 	#skimage.io.imsave(folder + '/meanFace.png', posMean)
 	plt.imshow(posMean, cmap = plt.get_cmap('gray')); #plt.show()
-	plt.savefig(folder + '/meanPosFace.png')
+	plt.axis('off')
+	plt.savefig(folder + '/meanPosFace.png',bbox_inches='tight')
 
 	plt.imshow(negMean, cmap = plt.get_cmap('gray')); #plt.show()
-	plt.savefig(folder + '/meanNegFace.png')
+	plt.axis('off')
+	plt.savefig(folder + '/meanNegFace.png',bbox_inches='tight')
 
 	return (posMean, negMean)
 
@@ -224,24 +234,25 @@ def ComputeSVD(A, threshold):
 	#print s
 	#plt.plot(s); plt.show()
 
-	listElements = s[0: int(len(s) * .1)]
-
-	Uk = []
-	sk = []
-	k = 0
-	for i in range(0,len(listElements)):
-		k+=1
-		Uk.append(U[i])
-		sk.append(s[i])
+	# listElements = s[0: int(len(s) * .1)]
 
 	# Uk = []
 	# sk = []
 	# k = 0
-	# for i in range(0,len(s)):
-	# 	if s[i] > threshold:
-	# 		k+=1
-	# 		Uk.append(U[i])
-	# 		sk.append(s[i])
+	# for i in range(0,len(listElements)):
+	# 	k+=1
+	# 	Uk.append(U[i])
+	# 	sk.append(s[i])
+	# 	print s[i]
+
+	Uk = []
+	sk = []
+	k = 0
+	for i in range(0,len(s)):
+		if s[i] > threshold:
+			k+=1
+			Uk.append(U[i])
+			sk.append(s[i])
 
 	Uk = np.array(Uk)
 	Uk = np.transpose(Uk)
@@ -291,93 +302,72 @@ def findFacesGaussian(inputImage,facePrior):
 			CLASSIFIER = (G_POS*pi)/(G_NEG*(1-pi))
 			if CLASSIFIER > 1:
 				mask[i,j] = G_POS
-	# Nonmaximum Suppresion
-	M = 12
-	for i in range(0,(image.shape[0]-12)):
-		for j in range(0,(image.shape[1]-12)):
-			for k in range(-M,M,1):
-				for r in range(-M,M,1):
-					if checkBounds(image, i+k,j+r):
-						if mask[i,j] >  mask[i+k,j+r]:
-							mask[i+k,j+r] = 0;
 
+	mask = nonMaxSuppression(mask, image, 12)
 
 	for i in range(0,mask.shape[0]):
 		for j in range(0,mask.shape[1]):
 			if mask[i,j] > 0:
-				image = drawBox(image,i+6,j+6)
+				image = drawBox(image,i,j,1)
 
 	return image
 
-imageDB144 = np.ndarray(shape=(200,144), dtype=float, order='F')
-for i in range(0,len(imageDB)):
-	imageDB144[i] = imageDB[i].ravel()
 
-
-A_Pos = []
-for i in range(0,100):
-	A_Pos.append(imageDB144[i] - posMean.ravel())
-A_Pos = np.array(A_Pos)
-
-A_Neg = []
-for i in range(100,200):
-	A_Neg.append(imageDB144[i] - negMean.ravel())
-A_Neg = np.array(A_Neg)
-
-
-thres = 1.24007132e+00
-
-############## POSITIVE GAUSSIAN ################
-Ek_Pos, Uk_Pos, Sk_Pos, k_Pos = ComputeSVD(A_Pos, thres)
-
-
-############## NEGATIVE GAUSSIAN ################
-Ek_Neg, Uk_Neg, Sk_Neg, k_Neg = ComputeSVD(A_Neg, thres)
-
-
-
-# totalFaces = 0
-# pi = .99
-# for i in range(0,100):
-# 	x = imageDB144[i]
-
-# 	G_POS, C_POS = ComputeG(x,Uk_Pos, Sk_Pos, posMean.ravel(), k_Pos)
-# 	G_NEG, C_NEG = ComputeG(x,Uk_Neg, Sk_Neg, negMean.ravel(), k_Neg)
-
-# 	print 'G_POS:',(G_POS*pi)
-
-# 	print 'G_NEG:', (G_NEG*(1-pi))
-
-
-# 	CLASSIFIER = (G_POS*pi)/(G_NEG*(1-pi))
-
-# 	if CLASSIFIER > 1:
-# 		totalFaces += 1
-
-# 	print 'CLASSIFIER:',CLASSIFIER
-
-# 	print ""
-
-allTestImages = ['next.png', 'nens.png', 'married.png', 'lawoman.png' ,'frisbee.png', 'ew-friends.png' ,'aerosmith-double.png']
-
-allTestImages = ['next.png']
-
-for i in allTestImages:
-	testImgName = i
-	testImg = skimage.img_as_float(skimage.io.imread(folder + '/testImages/' + testImgName))
+def findFacesGaussianPyramid(inputImage, facePrior):
+	origImage = inputImage
 
 	GaussianPyramid = None
-	GaussianPyramid = createGaussianPyramid(testImg)
+	GaussianPyramid = createGaussianPyramid(origImage)
 
-	facePrior = 0.003
-	extractedFaces = {}
-	for i in GaussianPyramid:
-		#plt.imshow(GaussPyramid[i], cmap = plt.get_cmap('gray')); plt.show()
-		extractedFaces[i] = findFacesGaussian(GaussianPyramid[i],facePrior)
+	mask = np.ndarray(shape=(origImage.shape[0],origImage.shape[1]), dtype=np.dtype(np.float64))
+	for i in range(0,mask.shape[0]):
+		for j in range(0,mask.shape[1]):
+			mask[i,j] = 0
 
-	for i in extractedFaces:
-		plt.imshow(extractedFaces[i], cmap = plt.get_cmap('gray')); #plt.show()
-		plt.savefig(folder + '/testResults/GAUSSIAN_' + testImgName.replace('.png', '') + str(i) + '.png')
+	multiplier = np.ndarray(shape=(origImage.shape[0],origImage.shape[1]), dtype=np.dtype(np.float64))
+	for i in range(0,multiplier.shape[0]):
+		for j in range(0,multiplier.shape[1]):
+			multiplier[i,j] = 1
+
+	origXshape = origImage.shape[0]
+	origYshape = origImage.shape[1]
+
+	for G in range(1,len(GaussianPyramid)):
+		image = {}
+		image = GaussianPyramid[G]
+		currXshape = image.shape[0]
+		currYshape = image.shape[1]
+
+		currMultiplier = float(origXshape)/float(currXshape)
+		for i in range(0,(image.shape[0]-12)):
+			for j in range(0,(image.shape[1]-12)):
+				currFrame = image[i:i+12,j:j+12]
+				x = currFrame.ravel()
+
+				G_POS, C_POS = ComputeG(x,Uk_Pos, Sk_Pos, posMean.ravel(), k_Pos)
+				G_NEG, C_NEG = ComputeG(x,Uk_Neg, Sk_Neg, negMean.ravel(), k_Neg)
+
+				pi = (1-facePrior)
+				CLASSIFIER = (G_POS*pi)/(G_NEG*(1-pi))
+				if CLASSIFIER > 1:
+					mask[i,j] = G_POS
+					origI = int(round(i*currMultiplier))
+					origJ = int(round(j*currMultiplier))
+					if (G_POS > mask[origI,origJ]):
+						mask[origI,origJ] = G_POS
+						multiplier[origI,origJ] = currMultiplier
+
+
+	# Nonmaximum Suppresion
+	mask = nonMaxSuppression(mask,origImage,22)
+
+	for i in range(0,mask.shape[0]):
+		for j in range(0,mask.shape[1]):
+			if mask[i,j] > 0:
+				origImage = drawBox(origImage,i,j,multiplier[i,j])
+
+	#plt.imshow(origImage, cmap = plt.get_cmap('gray')); plt.show()
+	return origImage
 
 
 
@@ -417,21 +407,56 @@ def trainLogistic(iDB):
 
 	return w
 
-
-# Test train data (sanity check)
-for i in range(0,200):
-	g = 1/float(1+np.exp(-(np.dot(np.transpose(w),X[i]))))
-	print Y[i]
-	print g
-	print ""
-
 #############################################################
 ####################### TEST FUNCTIONS ######################
 #############################################################
+# Test train data (sanity check)
 
+
+def testIterations():
+ITERATIONS = [1,10,100,1000,10000]
+ACC = []
+for k in range(0,len(ITERATIONS)):
+	print k
+	X = np.ndarray(shape=(200,145), dtype=np.dtype(np.float64))
+
+	Y = np.zeros(200)
+	Y[0:100] = 1
+
+	for i in range(0,len(imageDB)):
+		X[i,0:144] = imageDB[i].ravel()
+		X[i,144] = 1
+
+	w = np.zeros(145,dtype=np.dtype(np.float64))
+
+	for j in range(0,ITERATIONS[k]):
+		sum1 = 0
+		for i in range(0,200):
+			g = 1/float(1+np.exp(-(np.dot(np.transpose(w),X[i]))))
+			sum1 += np.dot((Y[i] - g),X[i])
+
+		n = 0.3 #learning rate
+		w = w + n*sum1
+
+	accuracy = 0
+	for i in range(0,200):
+		g = 1/float(1+np.exp(-(np.dot(np.transpose(w),X[i]))))
+		YT = 0.0
+		if g > 0.5:
+			YT = 1.0
+		
+		if YT == Y[i]:
+			accuracy +=1
+	ACC[k] = (accuracy/float(200))*100
+
+
+# plt.plot(ACC, 'ro')
+# plt.axis(ITERATIONS)
+# plt.show()
 
 def findFacesLogistic(inputImage):
 	image = inputImage
+
 
 	mask = np.ndarray(shape=(image.shape[0],image.shape[1]), dtype=np.dtype(np.float64))
 	for i in range(0,mask.shape[0]):
@@ -450,32 +475,128 @@ def findFacesLogistic(inputImage):
 				mask[i,j] = np.dot(w,x)
 
 	# Nonmaximum Suppresion
-	M = 12
-	for i in range(0,(image.shape[0]-12)):
-		for j in range(0,(image.shape[1]-12)):
-			for k in range(-M,M,1):
-				for r in range(-M,M,1):
-					if checkBounds(image, i+k,j+r):
-						if mask[i,j] >  mask[i+k,j+r]:
-							mask[i+k,j+r] = 0;
-
+	mask = nonMaxSuppression(mask,image,12)
 
 	for i in range(0,mask.shape[0]):
 		for j in range(0,mask.shape[1]):
 			if mask[i,j] > 0:
-				image = drawBox(image,i+6,j+6)
+				image = drawBox(image,i,j,1)
 
 	return image
 
+
+
+def findFacesLogisticPyramid(GaussianPyramid,inputImage):
+	origImage = inputImage
+	origImage = skimage.img_as_float(skimage.io.imread(folder + '/testImages/' + testImgName))
+	GaussianPyramid = None
+	GaussianPyramid = createGaussianPyramid(origImage)
+
+	mask = np.ndarray(shape=(origImage.shape[0],origImage.shape[1]), dtype=np.dtype(np.float64))
+	for i in range(0,mask.shape[0]):
+		for j in range(0,mask.shape[1]):
+			mask[i,j] = 0
+
+	multiplier = np.ndarray(shape=(origImage.shape[0],origImage.shape[1]), dtype=np.dtype(np.float64))
+	for i in range(0,multiplier.shape[0]):
+		for j in range(0,multiplier.shape[1]):
+			multiplier[i,j] = 1
+
+	origXshape = origImage.shape[0]
+	origYshape = origImage.shape[1]
+
+	for G in range(1,len(GaussianPyramid)):
+		image = {}
+		image = GaussianPyramid[G]
+		currXshape = image.shape[0]
+		currYshape = image.shape[1]
+
+		currMultiplier = float(origXshape)/float(currXshape)
+		print currMultiplier
+		for i in range(0,(image.shape[0]-12)):
+			for j in range(0,(image.shape[1]-12)):
+				currFrame = image[i:i+12,j:j+12]
+				x = [0]*145
+				x[0:144] = currFrame.ravel()
+				x[144] = 1
+				g = 1/float(1+np.exp(-(np.dot(w,x))))
+				if (g > 0.5):
+					origI = int(round(i*currMultiplier))
+					origJ = int(round(j*currMultiplier))
+					if (np.dot(w,x) > mask[origI,origJ]):
+						mask[origI,origJ] = np.dot(w,x)
+						multiplier[origI,origJ] = currMultiplier
+
+	mask = nonMaxSuppression(mask,origImage,22)
+
+	for i in range(0,mask.shape[0]):
+		for j in range(0,mask.shape[1]):
+			if mask[i,j] > 0:
+				origImage = drawBox(origImage,i,j,multiplier[i,j])
+
+	#plt.imshow(origImage, cmap = plt.get_cmap('gray')); plt.show()
+	return origImage
+
+
+
 #############################################################
-###################### TEST ON IMAGES #######################
+###################### TEST ON GAUSSIAN #######################
+#############################################################
+
+imageDB144 = np.ndarray(shape=(200,144), dtype=float, order='F')
+for i in range(0,len(imageDB)):
+	imageDB144[i] = imageDB[i].ravel()
+A_Pos = []
+for i in range(0,100):
+	A_Pos.append(imageDB144[i] - posMean.ravel())
+A_Pos = np.array(A_Pos)
+A_Neg = []
+for i in range(100,200):
+	A_Neg.append(imageDB144[i] - negMean.ravel())
+A_Neg = np.array(A_Neg)
+
+
+tau_Pos = 8.2
+tau_Neg = 4.2
+
+Ek_Pos, Uk_Pos, Sk_Pos, k_Pos = ComputeSVD(A_Pos, tau_Pos)
+
+Ek_Neg, Uk_Neg, Sk_Neg, k_Neg = ComputeSVD(A_Neg, tau_Neg)
+
+
+allTestImages = ['next.png', 'nens.png', 'married.png', 'lawoman.png' ,'frisbee.png', 'ew-friends.png' ,'aerosmith-double.png']
+
+#allTestImages = ['ew-friends.png']
+
+
+for i in allTestImages:
+	testImgName = i
+	testImg = skimage.img_as_float(skimage.io.imread(folder + '/testImages/' + testImgName))
+
+
+	facePrior = 0.001
+	extractedFaces = {}
+	#GaussianPyramid = None
+	#GaussianPyramid = createGaussianPyramid(testImg)
+	# for i in GaussianPyramid:
+	# 	#plt.imshow(GaussPyramid[i], cmap = plt.get_cmap('gray')); plt.show()
+	# 	extractedFaces[i] = findFacesGaussian(GaussianPyramid[i],facePrior)
+
+	extractedFaces[0] = findFacesGaussianPyramid(testImg,facePrior)
+	for i in extractedFaces:
+		plt.imshow(extractedFaces[i], cmap = plt.get_cmap('gray')); #plt.show()
+		plt.axis('off')
+		plt.savefig(folder + '/testResults/GAUSSIAN_' + testImgName.replace('.png', '') + str(i) + '.png',bbox_inches='tight')
+
+
+#############################################################
+###################### TEST ON LOGISTIC #######################
 #############################################################
 
 w = trainLogistic(imageDB)
 
 allTestImages = ['next.png', 'nens.png', 'married.png', 'lawoman.png' ,'frisbee.png', 'ew-friends.png' ,'aerosmith-double.png']
-
-allTestImages = ['nens.png']
+#allTestImages = ['nens.png']
 
 for i in allTestImages:
 	testImgName = i
@@ -485,11 +606,14 @@ for i in allTestImages:
 	GaussianPyramid = createGaussianPyramid(testImg)
 
 	extractedFaces = {}
-	for i in GaussianPyramid:
-		#plt.imshow(GaussPyramid[i], cmap = plt.get_cmap('gray')); plt.show()
-		extractedFaces[i] = findFacesLogistic(GaussianPyramid[i])
+	# for i in GaussianPyramid:
+	# 	#plt.imshow(GaussPyramid[i], cmap = plt.get_cmap('gray')); plt.show()
+	# 	extractedFaces[i] = findFacesLogistic(GaussianPyramid[i])
+
+	extractedFaces[0] = findFacesLogisticPyramid(GaussianPyramid,testImg)
 
 	for i in extractedFaces:
 		plt.imshow(extractedFaces[i], cmap = plt.get_cmap('gray')); #plt.show()
-		plt.savefig(folder + '/testResults/LOGISTIC_' + testImgName.replace('.png', '') + str(i) + '.png')
+		plt.axis('off')
+		plt.savefig(folder + '/testResults/LOGISTIC_' + testImgName.replace('.png', '') + str(i) + '.png',bbox_inches='tight')
 
